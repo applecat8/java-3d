@@ -1,19 +1,17 @@
 package org.applecat.game;
 
+import org.applecat.engine.GameItem;
+import org.applecat.engine.graph.Mesh;
 import org.applecat.engine.graph.ShaderProgram;
 import org.applecat.engine.Utils;
 import org.applecat.engine.Window;
+import org.applecat.engine.graph.Transformation;
+import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.FloatBuffer;
 
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_FLOAT;
-import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
-import static org.lwjgl.opengl.GL11.glClear;
-import static org.lwjgl.opengl.GL11.glDrawArrays;
-import static org.lwjgl.opengl.GL11.glViewport;
+import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
 import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
 import static org.lwjgl.opengl.GL15.glBindBuffer;
@@ -29,60 +27,39 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 
 public class Renderer {
 
-    private int vaoId;
-    private int vboId;
     private ShaderProgram shaderProgram;
 
+    private final Transformation transformation;
+
+    private static final float FOV = (float) Math.toRadians(60.0);
+
+    // 到近平面的距离（z-near）
+    private static final float Z_NEAR = 0.01f;
+
+    // 到远平面的距离 (z-far)
+    private static final float Z_FAR = 1000.0f;
+
     public Renderer() {
+        transformation = new Transformation();
     }
 
-    public void init() throws Exception {
+    public void init(Window window) throws Exception {
         shaderProgram = new ShaderProgram();
         shaderProgram.createVertexShader(Utils.loadResource("/vertex.vs"));
         shaderProgram.createFragmentShader(Utils.loadResource("/fragment.fs"));
         shaderProgram.link();
 
-        float[] vertices = new float[]{
-                0.0f, 0.5f, 0.0f,
-                -0.5f, -0.5f, 0.0f,
-                0.0f, -0.5f, 0.0f,
-        };
+        shaderProgram.createUniform("projectionMatrix");
+        shaderProgram.createUniform("worldMatrix");
 
-        /*
-          我们必须做的第一件事是将浮点数组存储到 FloatBuffer 中。
-          这主要是因为我们必须与基于 C 的 OpenGL 库接口，因此我们必须将浮点数组转换为可由库管理的东西。
-         */
-        FloatBuffer verticesBuffer = null;
-        try {
-            verticesBuffer = MemoryUtil.memAllocFloat(vertices.length);
-            verticesBuffer.put(vertices).flip();
-
-            // 创建vao并绑定
-            vaoId = glGenVertexArrays();
-            glBindVertexArray(vaoId);
-
-            // 创建vbo并绑定
-            vboId = glGenBuffers();
-            glBindBuffer(GL_ARRAY_BUFFER, vboId);
-            glBufferData(GL_ARRAY_BUFFER, verticesBuffer, GL_STATIC_DRAW);
-
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-
-            // 解除绑定
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            glBindVertexArray(0);
-        } finally {
-            if (verticesBuffer != null)
-                MemoryUtil.memFree(verticesBuffer);
-        }
+        window.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     public void clear() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window) {
+    public void render(Window window, GameItem[] gameItems) {
         // 渲染之前先清理
         clear();
 
@@ -92,17 +69,20 @@ public class Renderer {
         }
 
         shaderProgram.bind();
+        Matrix4f projectionMatrix = transformation.getProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
+        shaderProgram.setUniform("projectionMatrix", projectionMatrix);
 
-        // 绑定vao
-        glBindVertexArray(vaoId);
-        glEnableVertexAttribArray(0);
-
-        // 绘制顶点
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        //恢复状态
-        glDisableVertexAttribArray(0);
-        glBindVertexArray(0);
+        // 绘制mesh
+        for (GameItem gameItem : gameItems) {
+            // 设置对于这个 gameItem 的 worldMatrix
+            Matrix4f worldMatrix =
+                    transformation.getWorldMatrix(
+                            gameItem.getPosition(),
+                            gameItem.getRotation(),
+                            gameItem.getScale());
+            shaderProgram.setUniform("worldMatrix", worldMatrix);
+            gameItem.getMesh().render();
+        }
 
         shaderProgram.unbind();
     }
@@ -110,15 +90,5 @@ public class Renderer {
     public void cleanup() {
         if (shaderProgram != null)
             shaderProgram.cleanup();
-
-        glDisableVertexAttribArray(0);
-
-        // 删除vbo
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glDeleteBuffers(vboId);
-
-        // 删除vao
-        glBindVertexArray(0);
-        glDeleteVertexArrays(0);
     }
 }
