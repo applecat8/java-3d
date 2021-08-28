@@ -5,14 +5,8 @@ import static org.lwjgl.glfw.GLFW.*;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
-import org.lwjgl.system.MemoryStack;
 
-import java.nio.IntBuffer;
-
-import static org.lwjgl.opengl.GL11.GL_FALSE;
-import static org.lwjgl.opengl.GL11.GL_TRUE;
 import static org.lwjgl.opengl.GL11.glClearColor;
-import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class Window {
@@ -41,7 +35,7 @@ public class Window {
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-        windowHandle = glfwCreateWindow(300, 300, "Hello World", NULL, NULL);
+        windowHandle = glfwCreateWindow(300, 300, title, NULL, NULL);
         if (windowHandle == NULL)
             throw new RuntimeException("Failed to create the GLFW window");
 
@@ -111,11 +105,11 @@ public class Window {
         this.vSync = vSync;
     }
 
-    public boolean isvSync(){
+    public boolean isvSync() {
         return vSync;
     }
 
-    public boolean windowShouldClose(){
+    public boolean windowShouldClose() {
         return glfwWindowShouldClose(windowHandle);
     }
 }

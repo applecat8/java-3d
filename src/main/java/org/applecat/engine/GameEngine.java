@@ -1,5 +1,8 @@
 package org.applecat.engine;
 
+/**
+ * 游戏引擎： 控制游戏的循环
+ */
 public class GameEngine implements Runnable {
 
     public static final int TARGET_FPS = 75;
@@ -23,6 +26,8 @@ public class GameEngine implements Runnable {
             gameLoop();
         }catch (Exception e){
             e.printStackTrace();
+        }finally {
+            cleanup();
         }
     }
 
@@ -75,6 +80,10 @@ public class GameEngine implements Runnable {
 
     protected void input() {
         gameLogic.input(window);
+    }
+
+    protected void cleanup(){
+        gameLogic.cleanup();
     }
 
     protected void render() {
