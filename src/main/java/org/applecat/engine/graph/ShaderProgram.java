@@ -3,7 +3,6 @@ package org.applecat.engine.graph;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryStack;
 
-import javax.swing.*;
 import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,6 +72,11 @@ public class ShaderProgram {
             glUniformMatrix4fv(uniforms.get(uniformName), false, fb);
         }
     }
+
+    public void setUniform(String uniformName, int value){
+        glUniform1i(uniforms.get(uniformName), value);
+    }
+
     public void link() throws Exception {
         glLinkProgram(programId);
 

@@ -2,6 +2,8 @@ package org.applecat.engine.graph;
 
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
@@ -19,15 +21,13 @@ import org.lwjgl.system.MemoryUtil;
 public class Mesh {
     private final int vaoId;
 
-    private final int idxVboId;
-
-    private final int colourVboId;
-
-    private final int posVboId;
+    private final List<Integer> vboIdList;
 
     private final int vertexCount;
 
-    public Mesh(float[] positions, float[] colours, int[] indices){
+    private final Texture texture;
+
+    public Mesh(float[] positions, float[] textCoords, int[] indices, Texture texture){
 
         /*
           我们必须做的第一件事是将浮点数组存储到 FloatBuffer 中。
@@ -35,10 +35,12 @@ public class Mesh {
          */
         FloatBuffer posBuffer = null;
         IntBuffer indicesBuffer = null;
-        FloatBuffer colBuffer = null;
+        FloatBuffer textCoordsBuffer = null;
 
         try {
             vertexCount = indices.length;
+            vboIdList = new ArrayList<>();
+            this.texture = texture;
             
 
             // 创建vao并绑定
@@ -46,30 +48,34 @@ public class Mesh {
             glBindVertexArray(vaoId);
 
             // 生成vbo 位置缓冲
-            posVboId = glGenBuffers();
+            int vboId = glGenBuffers();
+            vboIdList.add(vboId);
             posBuffer = MemoryUtil.memAllocFloat(positions.length);
             posBuffer.put(positions).flip();
-            glBindBuffer(GL_ARRAY_BUFFER, posVboId);
+            glBindBuffer(GL_ARRAY_BUFFER, vboId);
             glBufferData(GL_ARRAY_BUFFER,  posBuffer, GL_STATIC_DRAW);
             glEnableVertexAttribArray(0);
             glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
 
             // 生成 vbo 颜色缓冲
 
-            colourVboId = glGenBuffers();
-            colBuffer = MemoryUtil.memAllocFloat(colours.length);
-            colBuffer.put(colours).flip();
-            glBindBuffer(GL_ARRAY_BUFFER, colourVboId);
-            glBufferData(GL_ARRAY_BUFFER,  colBuffer, GL_STATIC_DRAW);
+            vboId = glGenBuffers();
+            vboIdList.add(vboId);
+            textCoordsBuffer = MemoryUtil.memAllocFloat(textCoords.length);
+            textCoordsBuffer.put(textCoords).flip();
+            glBindBuffer(GL_ARRAY_BUFFER, vboId);
+            glBufferData(GL_ARRAY_BUFFER, textCoordsBuffer, GL_STATIC_DRAW);
             glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0);
+            glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
 
             // 生成 vbo 下标缓冲
-            idxVboId = glGenBuffers();
+            vboId = glGenBuffers();
+            vboIdList.add(vboId);
             indicesBuffer = MemoryUtil.memAllocInt(indices.length);
             indicesBuffer.put(indices).flip();
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idxVboId);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboId);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,  indicesBuffer, GL_STATIC_DRAW);
+
 
             // 解除绑定
             glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -77,8 +83,8 @@ public class Mesh {
         } finally {
             if ( posBuffer != null)
                 MemoryUtil.memFree( posBuffer);
-            if (colBuffer != null)
-                MemoryUtil.memFree(colBuffer);
+            if (textCoordsBuffer != null)
+                MemoryUtil.memFree(textCoordsBuffer);
             if (indicesBuffer != null)
                 MemoryUtil.memFree(indicesBuffer);
         }
@@ -97,9 +103,9 @@ public class Mesh {
 
         // 删除 vbo buffers
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glDeleteBuffers(posVboId);
-        glDeleteBuffers(colourVboId);
-        glDeleteBuffers(idxVboId);
+        for (Integer vboId : vboIdList) {
+            glDeleteBuffers(vboId);
+        }
 
         // 删除vao
         glBindVertexArray(0);
@@ -110,15 +116,16 @@ public class Mesh {
      *
      */
     public void render() {
+        // Activate first texture unit
+        glActiveTexture(GL_TEXTURE0);
+        // Bind the texture
+        glBindTexture(GL_TEXTURE_2D, texture.getId());
+
         // 画出这个模型
         glBindVertexArray(getVaoId());
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
         glDrawElements(GL_TRIANGLES, getVertexCount(), GL_UNSIGNED_INT, 0);
 
         //恢复状态
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
         glBindVertexArray(0);
     }
 }

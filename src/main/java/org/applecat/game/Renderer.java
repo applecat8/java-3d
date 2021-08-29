@@ -51,6 +51,7 @@ public class Renderer {
 
         shaderProgram.createUniform("projectionMatrix");
         shaderProgram.createUniform("worldMatrix");
+        shaderProgram.createUniform("texture_sampler");
 
         window.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     }
@@ -84,6 +85,7 @@ public class Renderer {
             gameItem.getMesh().render();
         }
 
+        shaderProgram.setUniform("texture_sampler", 0);
         shaderProgram.unbind();
     }
 
