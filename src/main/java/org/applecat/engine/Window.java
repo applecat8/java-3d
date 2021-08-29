@@ -115,4 +115,8 @@ public class Window {
     public boolean windowShouldClose() {
         return glfwWindowShouldClose(windowHandle);
     }
+
+    public long getWindowHandle() {
+        return windowHandle;
+    }
 }

@@ -9,14 +9,16 @@ public class GameEngine implements Runnable {
 
     public static final int TARGET_UPS = 30;
 
-    private final IGameLogic gameLogic;
-    private final Window window;
+    private final IGameLogic gameLogic; // 游戏逻辑
+    private final Window window; // 窗口 管理
     private final Timer timer;
+    private final MouseInput mouseInput; // 鼠标事件
 
     public GameEngine(String windowTitle, int width, int height, boolean vsSync, IGameLogic gameLogic) {
         window = new Window(windowTitle, width, height, vsSync);
         this.gameLogic = gameLogic;
         timer = new Timer();
+        mouseInput = new MouseInput();
     }
 
     @Override
@@ -35,6 +37,7 @@ public class GameEngine implements Runnable {
         window.init();
         timer.init();
         gameLogic.init(window);
+        mouseInput.init(window);
     }
 
     protected void gameLoop(){
@@ -75,11 +78,12 @@ public class GameEngine implements Runnable {
     }
 
     private void update(float interval) {
-        gameLogic.update(interval);
+        gameLogic.update(interval, mouseInput);
     }
 
     protected void input() {
-        gameLogic.input(window);
+        mouseInput.input(window);
+        gameLogic.input(window, mouseInput);
     }
 
     protected void cleanup(){

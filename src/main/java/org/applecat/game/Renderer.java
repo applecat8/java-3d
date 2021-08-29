@@ -1,29 +1,14 @@
 package org.applecat.game;
 
 import org.applecat.engine.GameItem;
-import org.applecat.engine.graph.Mesh;
-import org.applecat.engine.graph.ShaderProgram;
 import org.applecat.engine.Utils;
 import org.applecat.engine.Window;
+import org.applecat.engine.graph.Camera;
+import org.applecat.engine.graph.ShaderProgram;
 import org.applecat.engine.graph.Transformation;
 import org.joml.Matrix4f;
-import org.lwjgl.system.MemoryUtil;
-
-import java.nio.FloatBuffer;
 
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
-import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
-import static org.lwjgl.opengl.GL15.glBindBuffer;
-import static org.lwjgl.opengl.GL15.glBufferData;
-import static org.lwjgl.opengl.GL15.glDeleteBuffers;
-import static org.lwjgl.opengl.GL15.glGenBuffers;
-import static org.lwjgl.opengl.GL20.glDisableVertexAttribArray;
-import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
-import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
-import static org.lwjgl.opengl.GL30.glBindVertexArray;
-import static org.lwjgl.opengl.GL30.glDeleteVertexArrays;
-import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 
 public class Renderer {
 
@@ -60,7 +45,7 @@ public class Renderer {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window, GameItem[] gameItems) {
+    public void render(Window window, GameItem[] gameItems, Camera camera) {
         // 渲染之前先清理
         clear();
 
@@ -69,23 +54,23 @@ public class Renderer {
             window.setResized(false);
         }
 
+        // 更新投影矩阵
         shaderProgram.bind();
         Matrix4f projectionMatrix = transformation.getProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
         shaderProgram.setUniform("projectionMatrix", projectionMatrix);
 
-        // 绘制mesh
+        Matrix4f viewMatrix = transformation.getViewMatrix(camera);
+
+        shaderProgram.setUniform("texture_sampler", 0);
+
+        // 更新 模型视图矩形
         for (GameItem gameItem : gameItems) {
-            // 设置对于这个 gameItem 的 worldMatrix
-            Matrix4f worldMatrix =
-                    transformation.getWorldMatrix(
-                            gameItem.getPosition(),
-                            gameItem.getRotation(),
-                            gameItem.getScale());
-            shaderProgram.setUniform("worldMatrix", worldMatrix);
+            // 设置对于这个 gameItem 的 模型视图矩阵
+            Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
+            shaderProgram.setUniform("worldMatrix", modelViewMatrix);
             gameItem.getMesh().render();
         }
 
-        shaderProgram.setUniform("texture_sampler", 0);
         shaderProgram.unbind();
     }
 
