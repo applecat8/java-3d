@@ -3,11 +3,10 @@ package org.applecat.game;
 import org.applecat.engine.GameItem;
 import org.applecat.engine.Utils;
 import org.applecat.engine.Window;
-import org.applecat.engine.graph.Camera;
-import org.applecat.engine.graph.Mesh;
-import org.applecat.engine.graph.ShaderProgram;
-import org.applecat.engine.graph.Transformation;
+import org.applecat.engine.graph.*;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import static org.lwjgl.opengl.GL11.*;
 
@@ -25,8 +24,12 @@ public class Renderer {
     // 到远平面的距离 (z-far)
     private static final float Z_FAR = 1000.0f;
 
+    private final float specularPower;
+
+
     public Renderer() {
         transformation = new Transformation();
+        specularPower = 10f;
     }
 
     public void init(Window window) throws Exception {
@@ -36,21 +39,23 @@ public class Renderer {
         shaderProgram.link();
 
         shaderProgram.createUniform("projectionMatrix");
-        shaderProgram.createUniform("worldMatrix");
+        shaderProgram.createUniform("modelViewMatrix");
         shaderProgram.createUniform("texture_sampler");
 
-        // 为默认颜色和控制它的标志(是否使用纹理)创建 uniform
-        shaderProgram.createUniform("colour");
-        shaderProgram.createUniform("useColour");
+        // Create uniform for material
+        shaderProgram.createMaterialUniform("material");
+        // Create lighting related uniforms
+        shaderProgram.createUniform("specularPower");
+        shaderProgram.createUniform("ambientLight");
+        shaderProgram.createPointLightUniform("pointLight");
 
-        window.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     public void clear() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    public void render(Window window, GameItem[] gameItems, Camera camera) {
+    public void render(Window window, GameItem[] gameItems, Camera camera, Vector3f ambientLight, PointLight pointLight) {
         // 渲染之前先清理
         clear();
 
@@ -66,6 +71,21 @@ public class Renderer {
 
         Matrix4f viewMatrix = transformation.getViewMatrix(camera);
 
+        // Update Light Uniforms
+        shaderProgram.setUniform("ambientLight", ambientLight);
+        shaderProgram.setUniform("specularPower", specularPower);
+
+        // Get a copy of the light object and transform its position to view coordinates
+        PointLight currPointLight = new PointLight(pointLight);
+        Vector3f lightPos = currPointLight.getPosition();
+        Vector4f aux = new Vector4f(lightPos, 1);
+        aux.mul(viewMatrix);
+        lightPos.x = aux.x;
+        lightPos.y = aux.y;
+        lightPos.z = aux.z;
+        shaderProgram.setUniform("pointLight", currPointLight);
+
+
         shaderProgram.setUniform("texture_sampler", 0);
 
         // 更新 模型视图矩形
@@ -73,11 +93,9 @@ public class Renderer {
             Mesh mesh = gameItem.getMesh();
             // 设置对于这个 gameItem 的 模型视图矩阵
             Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
-            shaderProgram.setUniform("worldMatrix", modelViewMatrix);
-
-            // Render the mes for this game item
-            shaderProgram.setUniform("colour", mesh.getColour());
-            shaderProgram.setUniform("useColour", mesh.isTextured() ? 0 : 1);
+            shaderProgram.setUniform("modelViewMatrix", modelViewMatrix);
+            // Render the mesh for this game item
+            shaderProgram.setUniform("material", mesh.getMaterial());
             mesh.render();
         }
 

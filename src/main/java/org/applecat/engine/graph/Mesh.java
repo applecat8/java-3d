@@ -10,7 +10,6 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
-import org.joml.Vector3f;
 import org.lwjgl.system.MemoryUtil;
 
 /**
@@ -21,7 +20,6 @@ import org.lwjgl.system.MemoryUtil;
  * 管理vao和vbo
  */
 public class Mesh {
-    private static final Vector3f DEFAULT_COLOUR = new Vector3f(1.0f, 1.0f, 1.0f);
 
     private final int vaoId;
 
@@ -29,9 +27,7 @@ public class Mesh {
 
     private final int vertexCount;
 
-    private Texture texture;
-
-    private Vector3f colour;
+    private Material material;
 
     public Mesh(float[] positions, float[] textCoords, float[] normals, int[] indices){
 
@@ -45,7 +41,6 @@ public class Mesh {
         FloatBuffer vecNormalsBuffer = null;
 
         try {
-            colour = Mesh.DEFAULT_COLOUR;
             vertexCount = indices.length;
             vboIdList = new ArrayList<>();
 
@@ -117,24 +112,12 @@ public class Mesh {
         return vertexCount;
     }
 
-    public boolean isTextured(){
-        return texture != null;
+    public Material getMaterial() {
+        return material;
     }
 
-    public Texture getTexture() {
-        return texture;
-    }
-
-    public void setTexture(Texture texture) {
-        this.texture = texture;
-    }
-
-    public Vector3f getColour() {
-        return colour;
-    }
-
-    public void setColour(Vector3f colour) {
-        this.colour = colour;
+    public void setMaterial(Material material) {
+        this.material = material;
     }
 
     public void cleanup() {
@@ -147,6 +130,7 @@ public class Mesh {
         }
 
         // Delete the texture
+        Texture texture = material.getTexture();
         if (texture != null) {
             texture.cleanup();
         }
@@ -160,6 +144,7 @@ public class Mesh {
      *
      */
     public void render() {
+        Texture texture = material.getTexture();
         // 如果有纹理，才渲染
         if (texture != null ){
             // Activate first texture unit
