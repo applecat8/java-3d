@@ -1,6 +1,7 @@
 package org.applecat.engine.graph;
 
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.FloatBuffer;
@@ -77,6 +78,10 @@ public class ShaderProgram {
         glUniform1i(uniforms.get(uniformName), value);
     }
 
+    public void setUniform(String colour, Vector3f value) {
+        glUniform3f(uniforms.get(colour), value.x, value.y, value.z);
+    }
+
     public void link() throws Exception {
         glLinkProgram(programId);
 
@@ -108,4 +113,5 @@ public class ShaderProgram {
         if (programId != 0)
             glDeleteProgram(programId);
     }
+
 }

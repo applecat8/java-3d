@@ -9,6 +9,8 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
+
+import org.joml.Vector3f;
 import org.lwjgl.system.MemoryUtil;
 
 /**
@@ -19,15 +21,19 @@ import org.lwjgl.system.MemoryUtil;
  * 管理vao和vbo
  */
 public class Mesh {
+    private static final Vector3f DEFAULT_COLOUR = new Vector3f(1.0f, 1.0f, 1.0f);
+
     private final int vaoId;
 
     private final List<Integer> vboIdList;
 
     private final int vertexCount;
 
-    private final Texture texture;
+    private Texture texture;
 
-    public Mesh(float[] positions, float[] textCoords, int[] indices, Texture texture){
+    private Vector3f colour;
+
+    public Mesh(float[] positions, float[] textCoords, float[] normals, int[] indices){
 
         /*
           我们必须做的第一件事是将浮点数组存储到 FloatBuffer 中。
@@ -36,12 +42,12 @@ public class Mesh {
         FloatBuffer posBuffer = null;
         IntBuffer indicesBuffer = null;
         FloatBuffer textCoordsBuffer = null;
+        FloatBuffer vecNormalsBuffer = null;
 
         try {
+            colour = Mesh.DEFAULT_COLOUR;
             vertexCount = indices.length;
             vboIdList = new ArrayList<>();
-            this.texture = texture;
-            
 
             // 创建vao并绑定
             vaoId = glGenVertexArrays();
@@ -68,6 +74,17 @@ public class Mesh {
             glEnableVertexAttribArray(1);
             glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
 
+            //
+            vboId = glGenBuffers();
+            vboIdList.add(vboId);
+            vecNormalsBuffer = MemoryUtil.memAllocFloat(normals.length);
+            vecNormalsBuffer.put(normals).flip();
+            glBindBuffer(GL_ARRAY_BUFFER, vboId);
+            glBufferData(GL_ARRAY_BUFFER, vecNormalsBuffer, GL_STATIC_DRAW);
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(2, 3, GL_FLOAT, false, 0, 0);
+
+
             // 生成 vbo 下标缓冲
             vboId = glGenBuffers();
             vboIdList.add(vboId);
@@ -85,6 +102,8 @@ public class Mesh {
                 MemoryUtil.memFree( posBuffer);
             if (textCoordsBuffer != null)
                 MemoryUtil.memFree(textCoordsBuffer);
+            if (vecNormalsBuffer != null)
+                MemoryUtil.memFree(vecNormalsBuffer);
             if (indicesBuffer != null)
                 MemoryUtil.memFree(indicesBuffer);
         }
@@ -98,6 +117,26 @@ public class Mesh {
         return vertexCount;
     }
 
+    public boolean isTextured(){
+        return texture != null;
+    }
+
+    public Texture getTexture() {
+        return texture;
+    }
+
+    public void setTexture(Texture texture) {
+        this.texture = texture;
+    }
+
+    public Vector3f getColour() {
+        return colour;
+    }
+
+    public void setColour(Vector3f colour) {
+        this.colour = colour;
+    }
+
     public void cleanup() {
         glDisableVertexAttribArray(0);
 
@@ -105,6 +144,11 @@ public class Mesh {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         for (Integer vboId : vboIdList) {
             glDeleteBuffers(vboId);
+        }
+
+        // Delete the texture
+        if (texture != null) {
+            texture.cleanup();
         }
 
         // 删除vao
@@ -116,10 +160,13 @@ public class Mesh {
      *
      */
     public void render() {
-        // Activate first texture unit
-        glActiveTexture(GL_TEXTURE0);
-        // Bind the texture
-        glBindTexture(GL_TEXTURE_2D, texture.getId());
+        // 如果有纹理，才渲染
+        if (texture != null ){
+            // Activate first texture unit
+            glActiveTexture(GL_TEXTURE0);
+            // Bind the texture
+            glBindTexture(GL_TEXTURE_2D, texture.getId());
+        }
 
         // 画出这个模型
         glBindVertexArray(getVaoId());
@@ -127,5 +174,6 @@ public class Mesh {
 
         //恢复状态
         glBindVertexArray(0);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
 }

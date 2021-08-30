@@ -4,6 +4,7 @@ import org.applecat.engine.GameItem;
 import org.applecat.engine.Utils;
 import org.applecat.engine.Window;
 import org.applecat.engine.graph.Camera;
+import org.applecat.engine.graph.Mesh;
 import org.applecat.engine.graph.ShaderProgram;
 import org.applecat.engine.graph.Transformation;
 import org.joml.Matrix4f;
@@ -38,6 +39,10 @@ public class Renderer {
         shaderProgram.createUniform("worldMatrix");
         shaderProgram.createUniform("texture_sampler");
 
+        // 为默认颜色和控制它的标志(是否使用纹理)创建 uniform
+        shaderProgram.createUniform("colour");
+        shaderProgram.createUniform("useColour");
+
         window.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     }
 
@@ -65,10 +70,15 @@ public class Renderer {
 
         // 更新 模型视图矩形
         for (GameItem gameItem : gameItems) {
+            Mesh mesh = gameItem.getMesh();
             // 设置对于这个 gameItem 的 模型视图矩阵
             Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
             shaderProgram.setUniform("worldMatrix", modelViewMatrix);
-            gameItem.getMesh().render();
+
+            // Render the mes for this game item
+            shaderProgram.setUniform("colour", mesh.getColour());
+            shaderProgram.setUniform("useColour", mesh.isTextured() ? 0 : 1);
+            mesh.render();
         }
 
         shaderProgram.unbind();
